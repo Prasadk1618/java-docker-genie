@@ -1,0 +1,46 @@
+pipeline {
+    agent any
+    tools{
+        jdk 'jdk17'
+        maven 'maven3.8'
+    }
+
+    environment{
+        SCANNER_HOME= tool 'sonar-scanner'
+    }
+    stages {
+        stage('Git Checkout') {
+            steps {
+                git branch: 'main', changelog: false, poll: false, url: 'https://github.com/Prasadk1618/java-docker-genie.git'
+            }
+        }
+    
+        stage('Compile') {
+            steps {
+                sh "mvn compile"
+            }
+        }
+    
+        stage('Sonarqube Analysis') {
+            steps {
+                
+                sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.url=http://43.205.243.36:9000/ -Dsonar.login=squ_545585b154fc45a18b681758da98cdfb3078b46f -Dsonar.projectName=Docker-pi \
+                -Dsonar.java.binaries=. \
+                -Dsonar.projectKey=Docker-pi '''
+            }
+        }
+        
+        stage('OWASP') {
+            steps {
+                dependencyCheck additionalArguments: '--scan ./ ', odcInstallation: 'DP'
+                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+            }
+        }
+        
+        stage('Build') {
+            steps {
+                sh "mvn clean install"
+            }
+        }
+    }
+}
